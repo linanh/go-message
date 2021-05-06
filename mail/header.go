@@ -222,6 +222,11 @@ type Header struct {
 	message.Header
 }
 
+// HeaderFromMap creates a header from a map of header fields.
+func HeaderFromMap(m map[string][]string) Header {
+	return Header{message.HeaderFromMap(m)}
+}
+
 // AddressList parses the named header field as a list of addresses. If the
 // header field is missing, it returns nil.
 //

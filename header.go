@@ -48,6 +48,11 @@ type Header struct {
 	textproto.Header
 }
 
+// HeaderFromMap creates a header from a map of header fields.
+func HeaderFromMap(m map[string][]string) Header {
+	return Header{textproto.HeaderFromMap(m)}
+}
+
 // ContentType parses the Content-Type header field.
 //
 // If no Content-Type is specified, it returns "text/plain".
