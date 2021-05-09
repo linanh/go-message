@@ -9,8 +9,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/linanh/go-imap/utf7"
 	"github.com/linanh/go-message"
+	"github.com/linanh/go-message/utf7"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/charmap"
 	"golang.org/x/text/encoding/htmlindex"
