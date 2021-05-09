@@ -1,4 +1,4 @@
-module github.com/emersion/go-message
+module github.com/linanh/go-message
 
 go 1.14
 
