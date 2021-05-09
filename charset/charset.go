@@ -9,6 +9,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/linanh/go-imap/utf7"
 	"github.com/linanh/go-message"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/charmap"
@@ -24,6 +25,7 @@ import (
 // https://www.iana.org/assignments/character-sets/character-sets.xhtml
 var charsets = map[string]encoding.Encoding{
 	"ansi_x3.110-1983": charmap.ISO8859_1, // see RFC 1345 page 62, mostly superset of ISO 8859-1
+	"utf-7":            utf7.Encoding,
 }
 
 func init() {
