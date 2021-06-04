@@ -34,7 +34,7 @@ func encodingReader(enc string, r io.Reader) (io.Reader, error) {
 		dec = quotedprintable.NewReader(r)
 	case "base64":
 		dec = base64.NewDecoder(base64.StdEncoding, r)
-	case "7bit", "8bit", "binary", "":
+	case "7bit", "bit 7", "8bit", "binary", "":
 		dec = r
 	default:
 		return nil, fmt.Errorf("unhandled encoding %q", enc)

@@ -250,7 +250,7 @@ func (r *MultipartReader) NextPart() (*Part, error) {
 	for {
 		line, err := r.bufReader.ReadSlice('\n')
 
-		if err == io.EOF && (r.isFinalBoundary(line) || r.partsRead == 1) {
+		if err == io.EOF && (r.isFinalBoundary(line) || r.partsRead <= 2) {
 			// If the buffer ends in "--boundary--" without the
 			// trailing "\r\n", ReadSlice will return an error
 			// (since it's missing the '\n'), but this is a valid
