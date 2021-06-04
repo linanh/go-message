@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"strings"
 )
 
 var emptyParams = make(map[string]string)
@@ -251,7 +250,7 @@ func (r *MultipartReader) NextPart() (*Part, error) {
 	for {
 		line, err := r.bufReader.ReadSlice('\n')
 
-		if err == io.EOF && (r.isFinalBoundary(line) || strings.EqualFold(r.currentPart.Header.Get("Content-Type"), "text/plain")) {
+		if err == io.EOF && (r.isFinalBoundary(line) || r.partsRead == 1) {
 			// If the buffer ends in "--boundary--" without the
 			// trailing "\r\n", ReadSlice will return an error
 			// (since it's missing the '\n'), but this is a valid
