@@ -25,8 +25,14 @@ func formatAddressList(l []*Address) string {
 // Use this function only if you parse from a string, if you have a Header use
 // Header.AddressList instead
 func ParseAddress(address string) (*Address, error) {
+	alen := len(address)
+	if alen > 2 && address[alen-1] == '>' {
+		address = strings.TrimSpace(address[:alen-1]) + ">"
+	}
 	parser := mail.AddressParser{
-		&mime.WordDecoder{message.CharsetReader},
+		WordDecoder: &mime.WordDecoder{
+			CharsetReader: message.CharsetReader,
+		},
 	}
 	return parser.Parse(address)
 }
@@ -36,7 +42,9 @@ func ParseAddress(address string) (*Address, error) {
 // Header.AddressList instead
 func ParseAddressList(list string) ([]*Address, error) {
 	parser := mail.AddressParser{
-		&mime.WordDecoder{message.CharsetReader},
+		WordDecoder: &mime.WordDecoder{
+			CharsetReader: message.CharsetReader,
+		},
 	}
 	return parser.ParseList(list)
 }
