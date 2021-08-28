@@ -339,7 +339,8 @@ func (mr *MultipartReader) isBoundaryDelimiterLine(line []byte) (ret bool) {
 // RFC 822 defines:
 //    LWSP-char = SPACE / HTAB
 func skipLWSPChar(b []byte) []byte {
-	for len(b) > 0 && (b[0] == ' ' || b[0] == '\t') {
+	//fix some error format message
+	for len(b) > 0 && (b[0] == ' ' || b[0] == '\t' || b[0] > 0x7f) {
 		b = b[1:]
 	}
 	return b
