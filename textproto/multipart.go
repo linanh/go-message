@@ -279,6 +279,10 @@ func (r *MultipartReader) NextPart() (*Part, error) {
 		}
 
 		if expectNewPart {
+			//some message error format
+			if bytes.Contains(line, r.dashBoundaryDash) {
+				return nil, io.EOF
+			}
 			return nil, fmt.Errorf("multipart: expecting a new Part; got line %q", string(line))
 		}
 
