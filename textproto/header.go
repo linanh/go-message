@@ -531,6 +531,7 @@ func ReadHeader(r *bufio.Reader) (Header, error) {
 		return newHeader(fs), fmt.Errorf("message: malformed MIME header initial line: %v", string(line))
 	}
 
+	headerMalFormedNum := 0
 	for {
 		kv, err := readContinuedLineSlice(r)
 		if len(kv) == 0 {
@@ -541,7 +542,14 @@ func ReadHeader(r *bufio.Reader) (Header, error) {
 		// appear in the wild, violating specs, so we remove them if present.
 		i := bytes.IndexByte(kv, ':')
 		if i < 0 {
-			return newHeader(fs), fmt.Errorf("message: malformed MIME header line: %v", string(kv))
+			// If malformed header line num exceeds 3, return error
+			headerMalFormedNum++
+			if headerMalFormedNum > 2 {
+				return newHeader(fs), fmt.Errorf("message: malformed MIME header line: %v", string(kv))
+			}
+			// Fix malformed header
+			kv = append(kv, ':')
+			i = len(kv) - 1
 		}
 
 		keyBytes := trim(kv[:i])
