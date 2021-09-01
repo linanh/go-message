@@ -548,7 +548,7 @@ func ReadHeader(r *bufio.Reader) (Header, error) {
 				return newHeader(fs), fmt.Errorf("message: malformed MIME header line: %v", string(kv))
 			}
 			// Fix malformed header
-			kv = append(kv, ':')
+			kv = append(kv, []byte(": ")...)
 			i = len(kv) - 1
 		}
 
