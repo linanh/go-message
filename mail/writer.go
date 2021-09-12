@@ -19,7 +19,6 @@ func initInlineContentTransferEncoding(h *message.Header) {
 }
 
 func initInlineHeader(h *InlineHeader) {
-	h.Set("Content-Disposition", "inline")
 	initInlineContentTransferEncoding(&h.Header)
 }
 
