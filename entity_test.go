@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"math"
 	"reflect"
 	"strings"
 	"testing"
@@ -162,6 +163,83 @@ func TestRead_tooBig(t *testing.T) {
 	}
 }
 
+func TestReadOptions_withDefaults(t *testing.T) {
+	// verify that .withDefaults() doesn't mutate original values
+	original := &ReadOptions{MaxHeaderBytes: -123}
+	modified := original.withDefaults() // should set MaxHeaderBytes to math.MaxInt64
+
+	if original.MaxHeaderBytes == modified.MaxHeaderBytes {
+		t.Error("Expected ReadOptions.withDefaults() to not mutate the original value")
+	}
+}
+
+func TestReadWithOptions(t *testing.T) {
+	tests := []struct {
+		name     string
+		original *ReadOptions
+		want     *ReadOptions
+		wantErr  bool
+	}{
+		{
+			name:     "default value",
+			original: &ReadOptions{},
+			want:     &ReadOptions{MaxHeaderBytes: defaultMaxHeaderBytes},
+			wantErr:  true,
+		},
+		{
+			name:     "infinite header value",
+			original: &ReadOptions{MaxHeaderBytes: -1},
+			want:     &ReadOptions{MaxHeaderBytes: math.MaxInt64},
+			wantErr:  false,
+		},
+		{
+			name:     "infinite header value any negative",
+			original: &ReadOptions{MaxHeaderBytes: -1234},
+			want:     &ReadOptions{MaxHeaderBytes: math.MaxInt64},
+			wantErr:  false,
+		},
+		{
+			name:     "custom header value",
+			original: &ReadOptions{MaxHeaderBytes: 128},
+			want:     &ReadOptions{MaxHeaderBytes: 128},
+			wantErr:  true,
+		},
+	}
+	for _, test := range tests {
+
+		raw := "Subject: " + strings.Repeat("A", 4096*1024) + "\r\n" +
+			"\r\n" +
+			"This header is very big, but we should allow it via options.\r\n"
+
+		t.Run(test.name, func(t *testing.T) {
+
+			// First validate the options will be set as expected, or there is no
+			// point checking the ReadWithOptions func.
+			got := test.original.withDefaults()
+			if !reflect.DeepEqual(got, test.want) {
+				t.Fatalf("ReadOptions.withDefaults() =\n%#v\nbut want:\n%#v", got, test.want)
+			}
+
+			_, err := ReadWithOptions(strings.NewReader(raw), test.original)
+			gotErr := err != nil
+
+			if gotErr != test.wantErr {
+				t.Errorf("ReadWithOptions() = %t but want: %t", gotErr, test.wantErr)
+			}
+		})
+	}
+}
+
+func TestReadWithOptions_nilDefault(t *testing.T) {
+	raw := "Subject: Something\r\n"
+	var opts *ReadOptions
+	opts = nil
+	_, err := ReadWithOptions(strings.NewReader(raw), opts)
+	if err != nil {
+		t.Fatalf("ReadWithOptions() = %v", err)
+	}
+}
+
 func TestEntity_WriteTo_decode(t *testing.T) {
 	e := testMakeEntity()
 
@@ -266,6 +344,43 @@ func TestNew_unknownCharset(t *testing.T) {
 	} else if s := string(b); s != expected {
 		t.Errorf("Expected %q as entity body but got %q", expected, s)
 	}
+}
+
+// Checks that we are compatible both with lines longer than 72 octets and
+// FWS indented lines - per RFC-2045 whitespace should be ignored.
+func TestNew_paddedBase64(t *testing.T) {
+
+	testPartRaw := "Content-Type: text/plain; name=\"test.txt\"\r\n" +
+		"Content-Transfer-Encoding: base64\r\n" +
+		"Content-ID: <1234567@example.com>\r\n" +
+		"Content-Disposition: attachment; filename=\"text.txt\"\r\n" +
+		"\r\n" +
+		"TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdCwgc2VkIGRvIGVpdXNtb2QgdGVtc\r\n" +
+		" G9yIGluY2lkaWR1bnQgdXQgbGFib3JlIGV0IGRvbG9yZSBtYWduYSBhbGlxdWEuIFV0IGVuaW0gYWQgbWluaW0gdmVuaWFtLCBxd\r\n" +
+		" WlzIG5vc3RydWQgZXhlcmNpdGF0aW9uIHVsbGFtY28gbGFib3JpcyBuaXNpIHV0IGFsaXF1aXAgZXggZWEgY29tbW9kbyBjb25zZ\r\n" +
+		" XF1YXQuIER1aXMgYXV0ZSBpcnVyZSBkb2xvciBpbiByZXByZWhlbmRlcml0IGluIHZvbHVwdGF0ZSB2ZWxpdCBlc3NlIGNpbGx1b\r\n" +
+		" SBkb2xvcmUgZXUgZnVnaWF0IG51bGxhIHBhcmlhdHVyLiBFeGNlcHRldXIgc2ludCBvY2NhZWNhdCBjdXBpZGF0YXQgbm9uIHByb\r\n" +
+		" 2lkZW50LCBzdW50IGluIGN1bHBhIHF1aSBvZmZpY2lhIGRlc2VydW50IG1vbGxpdCBhbmltIGlkIGVzdCBsYWJvcnVtLg=="
+
+	expected := "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed" +
+		" do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut e" +
+		"nim ad minim veniam, quis nostrud exercitation ullamco laboris nisi " +
+		"ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehe" +
+		"nderit in voluptate velit esse cillum dolore eu fugiat nulla pariatu" +
+		"r. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui" +
+		" officia deserunt mollit anim id est laborum."
+
+	e, err := Read(strings.NewReader(testPartRaw))
+	if err != nil {
+		t.Fatal("New(padded Base64): expected no error, got", err)
+	}
+
+	if b, err := ioutil.ReadAll(e.Body); err != nil {
+		t.Error("Expected no error while reading entity body, got", err)
+	} else if s := string(b); s != expected {
+		t.Errorf("Expected %q as entity body but got %q", expected, s)
+	}
+
 }
 
 func TestNewEntity_MultipartReader_notMultipart(t *testing.T) {
